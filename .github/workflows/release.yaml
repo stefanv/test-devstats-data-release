@@ -1,0 +1,81 @@
+name: Download and release devstats data bundle
+
+on:
+  push:
+  schedule:
+    - cron: "0 1 * * 0"  # 01:00 on Sundays, https://crontab.guru/#0_1_*_*_0
+
+permissions:
+  contents: write  # to make release
+
+jobs:
+  download-1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: scientific-python/devstats-query-action@main
+        with:
+          repos: |
+            - scientific-python/devstats
+          artifact-name: devstats-scientific-python-1
+
+  download-2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: scientific-python/devstats-query-action@main
+        with:
+          repos: |
+            - scientific-python/spin
+          artifact-name: devstats-scientific-python-2
+
+  release:
+    needs: [download-1, download-2]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: devstats-scientific-python-*
+          merge-multiple: true
+          path: .
+
+      - name: Set variables
+        shell: bash
+        run: |
+          ISODATE=$(TZ=US/Pacific date +"%Y-%m-%d")
+          echo "ISODATE=$ISODATE" >> $GITHUB_ENV
+          echo "QUERY_FILENAME=$ISODATE-queries.tar.xz" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+        with:
+          path: devstats-data
+
+      - name: Push date as tag
+        shell: bash
+        run: >-
+          (cd devstats-data &&
+           git config user.name github-actions &&
+           git config user.email github-actions@github.com &&
+           git tag -a $ISODATE -m "Release $ISODATE" &&
+           git push origin $ISODATE)
+
+      - uses: actions/checkout@v4
+        with:
+          repository: scientific-python/devstats
+          path: devstats
+
+      - name: Bundle queries
+        shell: bash
+        run: |
+          tar cfJ $QUERY_FILENAME --strip-components=3 devstats/devstats/queries/*
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: |
+            This is the ${{ env.ISODATE }} snapshot of developer statistics for [Scientific Python](https://scientific-python.org) [core projects](https://scientific-python.org/specs/core-projects/).
+
+            You can generate a report from this data using [devstats](https://github.com/scientific-python/devstats).
+
+            `${{ env.QUERY_FILENAME }}` contains the queries used for this release.
+          tag_name: ${{ env.ISODATE }}
+          files: |
+            *.xz
