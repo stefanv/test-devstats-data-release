@@ -1,9 +1,10 @@
 name: Download and release devstats data bundle
 
-on:
-  push:
-  schedule:
-    - cron: "0 1 * * 0"  # 01:00 on Sundays, https://crontab.guru/#0_1_*_*_0
+# Disable
+#on:
+#  push:
+#  schedule:
+#    - cron: "0 1 * * 0"  # 01:00 on Sundays, https://crontab.guru/#0_1_*_*_0
 
 permissions:
   contents: write  # to make release
