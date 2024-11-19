@@ -67,7 +67,7 @@ jobs:
       - name: Bundle queries
         shell: bash
         run: |
-          tar cfJ $QUERY_FILENAME --strip-components=3 devstats/devstats/queries/*
+          tar cfJ $QUERY_FILENAME -C ./devstats/devstats/queries .
 
       - name: Release
         uses: softprops/action-gh-release@v2
